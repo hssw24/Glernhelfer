@@ -1,0 +1,668 @@
+﻿<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Prüfungstrainer Physik – VHS</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    :root {
+      --bg: #f0f4f8;
+      --card: #ffffff;
+      --ink: #1a2b3c;
+      --mute: #5a6f80;
+      --accent: #1f6f9c;
+      --ok: #1b7a4b;
+      --bad: #b3361f;
+      --line: #c9d6e0;
+      --radius: 14px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--ink);
+      line-height: 1.5;
+      min-height: 100vh;
+      padding-bottom: env(safe-area-inset-bottom, 0);
+    }
+    header {
+      background: var(--accent);
+      color: white;
+      padding: 18px 16px 16px;
+      text-align: center;
+    }
+    header h1 { font-size: 1.3rem; font-weight: 700; }
+    header p { font-size: 0.9rem; opacity: 0.92; margin-top: 4px; }
+
+
+    main {
+      max-width: 640px;
+      margin: 0 auto;
+      padding: 16px 14px 80px;
+    }
+
+
+    .search-box {
+      background: var(--card);
+      border: 2px solid var(--line);
+      border-radius: var(--radius);
+      padding: 16px;
+      margin-bottom: 18px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    }
+    .search-box label {
+      display: block;
+      font-weight: 600;
+      margin-bottom: 8px;
+      font-size: 1rem;
+    }
+    .search-box input {
+      width: 100%;
+      padding: 16px;
+      font-size: 1.1rem;
+      border: 2px solid var(--line);
+      border-radius: 12px;
+      outline: none;
+      -webkit-appearance: none;
+    }
+    .search-box input:focus { border-color: var(--accent); }
+    .search-box button {
+      width: 100%;
+      margin-top: 12px;
+      padding: 16px;
+      background: var(--accent);
+      color: white;
+      border: none;
+      border-radius: 12px;
+      font-size: 1.1rem;
+      font-weight: 600;
+      cursor: pointer;
+      min-height: 52px;
+    }
+    .search-box button:active { transform: scale(0.98); }
+    .hint {
+      font-size: 0.85rem;
+      color: var(--mute);
+      margin-top: 10px;
+      line-height: 1.4;
+    }
+
+
+    .result {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 18px;
+      margin-bottom: 16px;
+      display: none;
+    }
+    .result.visible { display: block; }
+    .result h2 {
+      font-size: 1.15rem;
+      margin-bottom: 12px;
+      color: var(--accent);
+    }
+    .answer-text {
+      font-size: 1.05rem;
+      margin-bottom: 14px;
+      white-space: pre-wrap;
+      line-height: 1.55;
+    }
+    .source {
+      font-size: 0.8rem;
+      color: var(--mute);
+      margin-bottom: 18px;
+      padding-top: 10px;
+      border-top: 1px solid var(--line);
+    }
+
+
+    .feedback {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+    .feedback button {
+      flex: 1;
+      padding: 16px 10px;
+      border: 2px solid var(--line);
+      border-radius: 12px;
+      background: var(--bg);
+      font-weight: 600;
+      font-size: 1.05rem;
+      cursor: pointer;
+      min-height: 56px;
+    }
+    .feedback button.ok { border-color: var(--ok); color: var(--ok); }
+    .feedback button.ok.active { background: #e3f4ea; }
+    .feedback button.bad { border-color: var(--bad); color: var(--bad); }
+    .feedback button.bad.active { background: #fbe8e3; }
+
+
+    .comment-box {
+      margin-top: 8px;
+      display: none;
+    }
+    .comment-box.visible { display: block; }
+    .comment-box textarea {
+      width: 100%;
+      padding: 14px;
+      border: 2px solid var(--line);
+      border-radius: 12px;
+      font-size: 1rem;
+      min-height: 90px;
+      resize: vertical;
+      font-family: inherit;
+    }
+    .comment-box button {
+      margin-top: 10px;
+      width: 100%;
+      padding: 14px;
+      background: var(--accent);
+      color: white;
+      border: none;
+      border-radius: 12px;
+      font-weight: 600;
+      font-size: 1.05rem;
+      cursor: pointer;
+      min-height: 50px;
+    }
+    .thanks {
+      margin-top: 14px;
+      padding: 14px;
+      background: #e3f4ea;
+      border-radius: 10px;
+      color: var(--ok);
+      font-weight: 600;
+      text-align: center;
+      display: none;
+    }
+
+
+    .admin-link {
+      text-align: center;
+      margin-top: 36px;
+      font-size: 0.9rem;
+      color: var(--mute);
+    }
+    .admin-link a { color: var(--accent); text-decoration: none; font-weight: 600; }
+
+
+    #admin {
+      display: none;
+      max-width: 700px;
+      margin: 0 auto;
+      padding: 16px 14px 60px;
+    }
+    #admin.visible { display: block; }
+    #admin h2 { margin-bottom: 6px; font-size: 1.25rem; }
+    #admin .sub { color: var(--mute); font-size: 0.9rem; margin-bottom: 18px; }
+    .back-btn {
+      display: inline-block;
+      margin-bottom: 16px;
+      color: var(--accent);
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 1rem;
+    }
+    .feedback-item {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 12px;
+    }
+    .feedback-item .meta {
+      font-size: 0.8rem;
+      color: var(--mute);
+      margin-bottom: 8px;
+    }
+    .feedback-item .query { font-weight: 600; margin-bottom: 6px; font-size: 1.05rem; }
+    .feedback-item .comment {
+      background: var(--bg);
+      padding: 12px;
+      border-radius: 8px;
+      margin-top: 10px;
+      font-size: 0.95rem;
+    }
+    .feedback-item button {
+      margin-top: 12px;
+      width: 100%;
+      padding: 12px;
+      border: none;
+      border-radius: 10px;
+      background: var(--ok);
+      color: white;
+      font-weight: 600;
+      font-size: 0.95rem;
+      cursor: pointer;
+      min-height: 46px;
+    }
+    .empty { color: var(--mute); text-align: center; padding: 40px 20px; }
+    .loading { text-align: center; color: var(--mute); padding: 20px; }
+
+
+    .config-warning {
+      background: #fff3cd;
+      border: 1px solid #ffc107;
+      color: #856404;
+      padding: 14px;
+      border-radius: 10px;
+      margin-bottom: 18px;
+      font-size: 0.95rem;
+      display: none;
+    }
+  </style>
+</head>
+<body>
+
+
+<header>
+  <h1>Prüfungstrainer Physik</h1>
+  <p>Stichwort oder Frage eingeben – Antworten aus dem Unterrichtsmaterial</p>
+</header>
+
+
+<main id="student">
+  <div class="config-warning" id="configWarning">
+    <strong>Konfiguration fehlt:</strong><br>
+    Bitte trage oben im Code deine Supabase-URL und den anon-Key ein.
+  </div>
+
+
+  <div class="search-box">
+    <label for="q">Was möchtest du wissen?</label>
+    <input type="text" id="q" placeholder="z. B. Kühlschrank, Verdampfen, Aggregatzustand …" autocomplete="off">
+    <button onclick="search()">Antwort holen</button>
+    <p class="hint">Tipp: Einfache Stichworte funktionieren am besten.</p>
+  </div>
+
+
+  <div class="result" id="result">
+    <h2 id="result-title">Antwort</h2>
+    <div class="answer-text" id="answer"></div>
+    <div class="source" id="source"></div>
+
+
+    <p style="font-weight:600; margin-bottom:10px; font-size:1.05rem;">War die Antwort hilfreich?</p>
+    <div class="feedback">
+      <button class="ok" onclick="rate(true)">Richtig / gut</button>
+      <button class="bad" onclick="rate(false)">Falsch / nicht gut</button>
+    </div>
+
+
+    <div class="comment-box" id="commentBox">
+      <textarea id="comment" placeholder="Was kann man besser machen? (optional)"></textarea>
+      <button onclick="saveFeedback()">Kommentar speichern</button>
+    </div>
+    <div class="thanks" id="thanks">Danke! Dein Feedback wurde gespeichert.</div>
+  </div>
+
+
+  <div class="admin-link">
+    <a href="#" onclick="showAdmin(); return false;">Admin-Bereich</a>
+  </div>
+</main>
+
+
+<div id="admin">
+  <a href="#" class="back-btn" onclick="showStudent(); return false;">← Zurück zur Suche</a>
+  <h2>Admin – Schüler-Feedback</h2>
+  <p class="sub">Hier siehst du alle Bewertungen. Gute Formulierungen kannst du übernehmen.</p>
+  <div id="feedbackList"><p class="loading">Lade Feedbacks…</p></div>
+</div>
+
+
+<script>
+// ============================================================
+//  >>> HIER DEINE SUPABASE-DATEN EINTRAGEN <<<
+// ============================================================
+const SUPABASE_URL = "https://DEIN-PROJEKT.supabase.co";          // ← hier ändern
+const SUPABASE_ANON_KEY = "DEIN-ANON-KEY";                        // ← hier ändern
+// ============================================================
+
+
+const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+
+// Prüfen ob konfiguriert
+if (SUPABASE_URL.includes("DEIN-PROJEKT") || SUPABASE_ANON_KEY.includes("DEIN-ANON")) {
+  document.getElementById("configWarning").style.display = "block";
+}
+
+
+// ============================================================
+// WISSENSBASIS (Formulierungen aus deinem Material)
+// ============================================================
+const knowledge = [
+  {
+    id: "agg-1",
+    keywords: ["aggregatzustand", "fest", "flüssig", "gasförmig", "teilchen", "zustand"],
+    title: "Die drei Aggregatzustände",
+    text: "Es gibt drei Zustände: fest, flüssig und gasförmig.\n\n• Fest: Die Teilchen haben feste Plätze und schwingen nur.\n• Flüssig: Die Teilchen berühren sich, gleiten aber aneinander vorbei.\n• Gasförmig: Große Abstände, die Teilchen fliegen frei.\n\nÜbergänge: schmelzen, erstarren, verdampfen, kondensieren. Direkt von fest nach gasförmig heißt sublimieren (zurück: resublimieren).",
+    source: "Aggregatzustände – Vorkenntnisse"
+  },
+  {
+    id: "agg-2",
+    keywords: ["temperatur", "teilchen", "bewegungsenergie", "wärmer", "nullpunkt"],
+    title: "Was ist Temperatur?",
+    text: "Temperatur ist ein Maß für die mittlere Bewegungsenergie der Teilchen.\n\nWärmer heißt: Die Teilchen bewegen sich im Mittel schneller.\nAm absoluten Nullpunkt (0 K = −273,15 °C) ist die Bewegung der Teilchen (fast) null. Kälter geht nicht.",
+    source: "Aggregatzustände – Teilchenmodell"
+  },
+  {
+    id: "agg-3",
+    keywords: ["schmelzen", "verdampfen", "schmelzwärme", "verdampfungswärme", "plateau", "temperatur bleibt"],
+    title: "Schmelzen und Verdampfen",
+    text: "Beim Erwärmen steigt die Temperatur. Beim Schmelzen und Verdampfen bleibt die Temperatur zunächst gleich – trotzdem wird Energie benötigt, um den Aggregatzustand zu ändern.\n\nMerksatz: Auf den Schrägen wird es wärmer, auf den Plateaus wird der Zustand gewechselt.\n\nWichtige Werte für Wasser (ungefähr):\n• Schmelzwärme: 334 kJ/kg\n• Verdampfungswärme: 2257 kJ/kg\nDie Verdampfung braucht besonders viel Energie.",
+    source: "Aggregatzustände + Spezifische Wärmekapazität"
+  },
+  {
+    id: "agg-4",
+    keywords: ["1 kg wasser", "erhitzen", "0 k", "200 °c", "energie", "gesamt"],
+    title: "1 kg Wasser von 0 K bis 200 °C",
+    text: "Gesamtenergiebedarf ungefähr 3780 kJ (≈ 3,78 MJ ≈ 1,05 kWh).\n\nDie Phasen:\n1. Eis erwärmen (−273 → 0 °C): ca. 574 kJ\n2. Schmelzen bei 0 °C: 334 kJ\n3. Wasser erwärmen (0 → 100 °C): ca. 419 kJ\n4. Verdampfen bei 100 °C: 2257 kJ (die größte Portion!)\n5. Dampf erwärmen (100 → 200 °C): 200 kJ",
+    source: "Aggregatzustände – Ablauf"
+  },
+  {
+    id: "kuehl-1",
+    keywords: ["kühlschrank", "wie funktioniert", "kältekreislauf", "kältemittel"],
+    title: "Wie funktioniert ein Kühlschrank?",
+    text: "Ein Kühlschrank erzeugt keine Kälte. Er transportiert Wärme von innen (ca. 5 °C) nach außen (ca. 22 °C). Das geht nicht von selbst – deshalb braucht er Strom für den Kompressor.\n\nIm geschlossenen Rohrsystem kreist ein Kältemittel (z. B. Isobutan) und wechselt dauernd zwischen flüssig und gasförmig.",
+    source: "Wie funktioniert ein Kühlschrank?"
+  },
+  {
+    id: "kuehl-2",
+    keywords: ["verdampfer", "kompressor", "verflüssiger", "kapillarrohr", "ablauf", "kreislauf"],
+    title: "Der Kältekreislauf – die 4 Stationen",
+    text: "1. Verdampfer (innen): Niedriger Druck, Siedepunkt ca. −25 °C. Wärme fließt aus dem Innenraum ins Kältemittel → es verdampft. Der Innenraum kühlt ab.\n\n2. Kompressor: Saugt den Dampf an und verdichtet ihn. Das Gas wird heiß (ca. 70–80 °C).\n\n3. Verflüssiger (Gitter an der Rückwand): Das heiße Gas gibt Wärme an die Raumluft ab und wird wieder flüssig.\n\n4. Kapillarrohr: Sehr dünnes Rohr → Druck fällt, Siedepunkt sinkt wieder auf ca. −25 °C. Das Kältemittel wird kalt und fließt zurück zum Verdampfer.\n\nMerksatz: Innen niedriger Druck → Wärme wird aufgenommen. Außen hoher Druck → Wärme wird abgegeben.",
+    source: "Wie funktioniert ein Kühlschrank? – Ablauf"
+  },
+  {
+    id: "kuehl-3",
+    keywords: ["druck", "siedepunkt", "höherer druck", "isobutan"],
+    title: "Druck und Siedepunkt",
+    text: "Höherer Druck = höherer Siedepunkt. Niedriger Druck = niedriger Siedepunkt.\n\nDas nutzt der Kühlschrank: Mit dem Druck stellt man den Siedepunkt des Kältemittels ein.\n\nBeispiel Isobutan (häufig in Haushaltskühlschränken):\n• ca. 0,6 bar → Siedepunkt ca. −25 °C\n• ca. 5 bar → Siedepunkt ca. 40 °C",
+    source: "Wie funktioniert ein Kühlschrank? – Vorkenntnisse"
+  },
+  {
+    id: "kuehl-4",
+    keywords: ["gefrierfach", "−18", "reif", "abtauen"],
+    title: "Das Gefrierfach",
+    text: "Das Gefrierfach sitzt am Verdampfer und ist die kälteste Stelle (ca. −18 °C).\nKalte Luft sinkt nach unten und kühlt den Rest des Kühlschranks (ca. 5 °C).\nBei −18 °C sind Bakterien praktisch gestoppt – Lebensmittel halten monatelang.\n\nFeuchte Luft beim Öffnen bildet am kalten Verdampfer Reif. Der muss regelmäßig abgetaut werden (außer bei No-Frost-Geräten).",
+    source: "Wie funktioniert ein Kühlschrank? – Gefrierfach"
+  },
+  {
+    id: "kuehl-5",
+    keywords: ["erweiterung", "thermostat", "isolierung", "dämmung", "kompressor läuft"],
+    title: "Thermostat und Isolierung",
+    text: "Thermostat: Ein Temperaturfühler misst die Innentemperatur. Ist es zu warm (z. B. über 7 °C), schaltet er den Kompressor ein. Ist es kalt genug (z. B. unter 3 °C), schaltet er aus. Der Motor läuft nur zeitweise.\n\nIsolierung: Die Wände bestehen aus Hartschaum mit vielen Luftbläschen. Die leiten Wärme sehr schlecht. Die Türdichtung verhindert Luftaustausch. So muss der Kompressor weniger laufen und spart Strom.",
+    source: "Kühlschrank – Erweiterung"
+  },
+  {
+    id: "waerme-1",
+    keywords: ["spezifische wärmekapazität", "c", "formel", "q ="],
+    title: "Wärmemenge und spezifische Wärmekapazität",
+    text: "Innerhalb eines Zustands: Q = c · m · ΔT\n\nc = spezifische Wärmekapazität = Wärme, die 1 kg um 1 K erwärmt.\n\nBeim Zustandswechsel steigt die Temperatur nicht. Die Energie löst Bindungen: Q = q · m (Schmelzwärme oder Verdampfungswärme).\n\nWasser hat eine besonders hohe Wärmekapazität (ca. 4,19 kJ/(kg·K)) – es speichert viel Wärme.",
+    source: "Aggregatzustände + Spezifische Wärmekapazität"
+  },
+  {
+    id: "waerme-2",
+    keywords: ["anwendung", "föhn", "schwitzen", "wärmepumpe", "klimaanlage"],
+    title: "Wozu braucht man das? (Anwendungen)",
+    text: "Diese Grundlagen braucht man z. B. für:\n• Föhnwetterlage: Feuchte Luft steigt auf, kühlt ab, Wasserdampf kondensiert und gibt Wärme frei.\n• Kühlschrank / Klimaanlage / Wärmepumpe: Verdampfen nimmt Wärme auf, Kondensieren gibt Wärme ab.\n• Schwitzen: Verdunstender Schweiß entzieht dem Körper Wärme.\n• Eis im Getränk: Schmelzwärme kühlt stark.\n• Meeresklima: Wasser speichert dank hohem c viel Wärme.",
+    source: "Aggregatzustände – Anwendungen"
+  }
+];
+
+
+// Gute Antworten werden aus Supabase geladen
+let goodAnswers = [];
+
+
+// Aktuelle Suche
+let currentQuery = "";
+let currentAnswer = null;
+let currentRating = null;
+
+
+// Gute Antworten laden
+async function loadGoodAnswers() {
+  try {
+    const { data, error } = await supabaseClient
+      .from("good_answers")
+      .select("*")
+      .order("created_at", { ascending: false });
+    if (!error && data) goodAnswers = data;
+  } catch (e) {
+    console.warn("Gute Antworten konnten nicht geladen werden", e);
+  }
+}
+loadGoodAnswers();
+
+
+// Suche
+function search() {
+  const q = document.getElementById("q").value.trim().toLowerCase();
+  if (!q) return;
+
+
+  currentQuery = q;
+  currentRating = null;
+  document.getElementById("thanks").style.display = "none";
+  document.getElementById("commentBox").classList.remove("visible");
+  document.querySelectorAll(".feedback button").forEach(b => b.classList.remove("active"));
+
+
+  let best = null;
+  let bestScore = 0;
+
+
+  // 1. Zuerst gute (freigegebene) Antworten
+  for (const g of goodAnswers) {
+    const kws = g.keywords || [];
+    const score = scoreMatch(q, kws, g.text);
+    if (score > bestScore) {
+      bestScore = score;
+      best = { ...g, fromGood: true };
+    }
+  }
+
+
+  // 2. Dann normale Wissensbasis
+  for (const item of knowledge) {
+    const score = scoreMatch(q, item.keywords, item.text);
+    if (score > bestScore) {
+      bestScore = score;
+      best = item;
+    }
+  }
+
+
+  const resultEl = document.getElementById("result");
+  if (best && bestScore > 0) {
+    currentAnswer = best;
+    document.getElementById("result-title").textContent = best.title || "Antwort";
+    document.getElementById("answer").textContent = best.text;
+    document.getElementById("source").textContent =
+      "Quelle: " + (best.source || "Unterrichtsmaterial") +
+      (best.fromGood ? " (bevorzugte gute Antwort)" : "");
+    resultEl.classList.add("visible");
+  } else {
+    currentAnswer = null;
+    document.getElementById("result-title").textContent = "Keine passende Antwort gefunden";
+    document.getElementById("answer").textContent =
+      "Versuch es mit einem anderen Stichwort, z. B. „Kühlschrank“, „Verdampfen“, „Aggregatzustand“ oder „Schmelzwärme“.";
+    document.getElementById("source").textContent = "";
+    resultEl.classList.add("visible");
+  }
+
+
+  resultEl.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+
+function scoreMatch(query, keywords, text) {
+  let score = 0;
+  const words = query.split(/\s+/).filter(w => w.length > 2);
+  for (const kw of keywords) {
+    if (query.includes(kw)) score += 3;
+  }
+  for (const w of words) {
+    if (text.toLowerCase().includes(w)) score += 1;
+    if (keywords.some(k => k.includes(w))) score += 2;
+  }
+  return score;
+}
+
+
+// Bewertung
+function rate(isGood) {
+  currentRating = isGood;
+  document.querySelectorAll(".feedback button").forEach(b => b.classList.remove("active"));
+  if (isGood) {
+    document.querySelector(".feedback .ok").classList.add("active");
+  } else {
+    document.querySelector(".feedback .bad").classList.add("active");
+  }
+  document.getElementById("commentBox").classList.add("visible");
+}
+
+
+async function saveFeedback() {
+  if (currentRating === null) return;
+
+
+  const comment = document.getElementById("comment").value.trim();
+
+
+  try {
+    const { error } = await supabaseClient.from("feedbacks").insert({
+      query: currentQuery,
+      answer_title: currentAnswer ? currentAnswer.title : null,
+      answer_text: currentAnswer ? currentAnswer.text : null,
+      rating: currentRating ? "richtig" : "falsch",
+      comment: comment || null
+    });
+
+
+    if (error) throw error;
+
+
+    document.getElementById("thanks").style.display = "block";
+    document.getElementById("commentBox").classList.remove("visible");
+  } catch (e) {
+    alert("Feedback konnte nicht gespeichert werden. Bitte später nochmal versuchen.\n\n" + (e.message || e));
+  }
+}
+
+
+// Admin
+function showAdmin() {
+  const pw = prompt("Admin-Passwort:");
+  if (pw !== "vhs2026") {
+    alert("Falsches Passwort.");
+    return;
+  }
+  document.getElementById("student").style.display = "none";
+  document.getElementById("admin").classList.add("visible");
+  renderFeedbacks();
+}
+
+
+function showStudent() {
+  document.getElementById("admin").classList.remove("visible");
+  document.getElementById("student").style.display = "block";
+}
+
+
+async function renderFeedbacks() {
+  const list = document.getElementById("feedbackList");
+  list.innerHTML = '<p class="loading">Lade Feedbacks…</p>';
+
+
+  try {
+    const { data, error } = await supabaseClient
+      .from("feedbacks")
+      .select("*")
+      .order("created_at", { ascending: false })
+      .limit(100);
+
+
+    if (error) throw error;
+
+
+    if (!data || data.length === 0) {
+      list.innerHTML = '<p class="empty">Noch keine Feedbacks vorhanden.</p>';
+      return;
+    }
+
+
+    list.innerHTML = data.map(f => `
+      <div class="feedback-item">
+        <div class="meta">${new Date(f.created_at).toLocaleString("de-DE")} · 
+          <strong style="color:{f.rating}</strong>
+        </div>
+        <div class="query">„${escapeHtml(f.query)}“</div>
+        <div style="font-size:0.95rem; color:var(--mute); margin-top:4px;">
+          Antwort: ${escapeHtml(f.answer_title || "—")}
+        </div>
+        ${f.comment ? `<div class="comment">${escapeHtml(f.comment)}</div>` : ""}
+        ${f.rating === "richtig" ? 
+          `<button onclick='promoteToGood(${f.id}, ${JSON.stringify(f.answer_title || "")}, ${JSON.stringify(f.answer_text || "")}, ${JSON.stringify(f.query)})'>
+            Als gute Antwort übernehmen
+          </button>` : ""}
+      </div>
+    `).join("");
+  } catch (e) {
+    list.innerHTML = `<p class="empty">Fehler beim Laden: ${escapeHtml(e.message || e)}</p>`;
+  }
+}
+
+
+async function promoteToGood(id, title, text, query) {
+  const newTitle = prompt("Kurzer Titel:", title) || title;
+  const newText = prompt("Text der guten Antwort (kannst du anpassen):", text);
+  if (!newText) return;
+
+
+  const keywordsStr = prompt("Stichworte (kommagetrennt):", query) || query;
+  const keywords = keywordsStr.toLowerCase().split(/,\s*/).map(k => k.trim()).filter(Boolean);
+
+
+  try {
+    const { error } = await supabaseClient.from("good_answers").insert({
+      title: newTitle,
+      text: newText,
+      keywords: keywords,
+      source: "Vom Admin freigegeben (Schüler-Feedback)"
+    });
+
+
+    if (error) throw error;
+
+
+    await loadGoodAnswers();
+    alert("Gespeichert! Diese Antwort wird bei passenden Suchen jetzt bevorzugt angezeigt.");
+  } catch (e) {
+    alert("Konnte nicht gespeichert werden:\n" + (e.message || e));
+  }
+}
+
+
+function escapeHtml(str) {
+  return String(str)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+
+// Enter-Taste
+document.getElementById("q").addEventListener("keydown", e => {
+  if (e.key === "Enter") search();
+});
+</script>
+</body>
+</html>
