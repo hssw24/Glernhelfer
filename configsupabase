@@ -1,6 +1,1 @@
-const SUPABASE_URL = "https://Glernhelfer.supabase.co";          // ← hier ändern
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ4eHFrcmdzcm5wb2FwanRodHJmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTMxMDExMTUsImV4cCI6MjEwODY3NzExNX0.cRAmnfS4cDly0NE1NQcdRIZvFbrFi7wnoEOLAC8Prls";                        // ← hier ändern
 
-https://Glernhelfer.supabase.co
-eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ4eHFrcmdzcm5wb2FwanRodHJmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTMxMDExMTUsImV4cCI6MjEwODY3NzExNX0.cRAmnfS4cDly0NE1NQcdRIZvFbrFi7wnoEOLAC8Prls
-sb_publishable_ggjsC58SxQ21UfhGgvU5Hw_bshq0zVE
