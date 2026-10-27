@@ -1,0 +1,730 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Prüfungstrainer Physik – VHS</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    :root {
+      --bg: #f0f4f8;
+      --card: #ffffff;
+      --ink: #1a2b3c;
+      --mute: #5a6f80;
+      --accent: #1f6f9c;
+      --ok: #1b7a4b;
+      --bad: #b3361f;
+      --line: #c9d6e0;
+      --radius: 14px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--ink);
+      line-height: 1.5;
+      min-height: 100vh;
+      padding-bottom: env(safe-area-inset-bottom, 0);
+    }
+    header {
+      background: var(--accent);
+      color: white;
+      padding: 18px 16px 16px;
+      text-align: center;
+    }
+    header h1 { font-size: 1.3rem; font-weight: 700; }
+    header p { font-size: 0.9rem; opacity: 0.92; margin-top: 4px; }
+
+    main {
+      max-width: 640px;
+      margin: 0 auto;
+      padding: 16px 14px 80px;
+    }
+
+    .search-box {
+      background: var(--card);
+      border: 2px solid var(--line);
+      border-radius: var(--radius);
+      padding: 16px;
+      margin-bottom: 18px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    }
+    .search-box label {
+      display: block;
+      font-weight: 600;
+      margin-bottom: 8px;
+      font-size: 1rem;
+    }
+    .search-box input {
+      width: 100%;
+      padding: 16px;
+      font-size: 1.1rem;
+      border: 2px solid var(--line);
+      border-radius: 12px;
+      outline: none;
+      -webkit-appearance: none;
+    }
+    .search-box input:focus { border-color: var(--accent); }
+
+    /* Modus-Auswahl */
+    .mode-select {
+      display: flex;
+      gap: 10px;
+      margin-top: 14px;
+    }
+    .mode-select button {
+      flex: 1;
+      padding: 12px 8px;
+      border: 2px solid var(--line);
+      border-radius: 12px;
+      background: var(--bg);
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      min-height: 48px;
+      color: var(--ink);
+    }
+    .mode-select button.active {
+      border-color: var(--accent);
+      background: #e8f2f8;
+      color: var(--accent);
+    }
+
+    .search-box .go-btn {
+      width: 100%;
+      margin-top: 14px;
+      padding: 16px;
+      background: var(--accent);
+      color: white;
+      border: none;
+      border-radius: 12px;
+      font-size: 1.1rem;
+      font-weight: 600;
+      cursor: pointer;
+      min-height: 52px;
+    }
+    .search-box .go-btn:active { transform: scale(0.98); }
+    .search-box .go-btn:disabled {
+      background: #8aaec4;
+      cursor: wait;
+    }
+    .hint {
+      font-size: 0.85rem;
+      color: var(--mute);
+      margin-top: 10px;
+      line-height: 1.4;
+    }
+
+    .result {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 18px;
+      margin-bottom: 16px;
+      display: none;
+    }
+    .result.visible { display: block; }
+    .result h2 {
+      font-size: 1.15rem;
+      margin-bottom: 12px;
+      color: var(--accent);
+    }
+    .answer-text {
+      font-size: 1.05rem;
+      margin-bottom: 14px;
+      white-space: pre-wrap;
+      line-height: 1.55;
+    }
+    .source {
+      font-size: 0.8rem;
+      color: var(--mute);
+      margin-bottom: 18px;
+      padding-top: 10px;
+      border-top: 1px solid var(--line);
+    }
+
+    .feedback {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+    .feedback button {
+      flex: 1;
+      padding: 16px 10px;
+      border: 2px solid var(--line);
+      border-radius: 12px;
+      background: var(--bg);
+      font-weight: 600;
+      font-size: 1.05rem;
+      cursor: pointer;
+      min-height: 56px;
+    }
+    .feedback button.ok { border-color: var(--ok); color: var(--ok); }
+    .feedback button.ok.active { background: #e3f4ea; }
+    .feedback button.bad { border-color: var(--bad); color: var(--bad); }
+    .feedback button.bad.active { background: #fbe8e3; }
+
+    .comment-box {
+      margin-top: 8px;
+      display: none;
+    }
+    .comment-box.visible { display: block; }
+    .comment-box textarea {
+      width: 100%;
+      padding: 14px;
+      border: 2px solid var(--line);
+      border-radius: 12px;
+      font-size: 1rem;
+      min-height: 90px;
+      resize: vertical;
+      font-family: inherit;
+    }
+    .comment-box button {
+      margin-top: 10px;
+      width: 100%;
+      padding: 14px;
+      background: var(--accent);
+      color: white;
+      border: none;
+      border-radius: 12px;
+      font-weight: 600;
+      font-size: 1.05rem;
+      cursor: pointer;
+      min-height: 50px;
+    }
+    .thanks {
+      margin-top: 14px;
+      padding: 14px;
+      background: #e3f4ea;
+      border-radius: 10px;
+      color: var(--ok);
+      font-weight: 600;
+      text-align: center;
+      display: none;
+    }
+
+    .admin-link {
+      text-align: center;
+      margin-top: 36px;
+      font-size: 0.9rem;
+      color: var(--mute);
+    }
+    .admin-link a { color: var(--accent); text-decoration: none; font-weight: 600; }
+
+    #admin {
+      display: none;
+      max-width: 700px;
+      margin: 0 auto;
+      padding: 16px 14px 60px;
+    }
+    #admin.visible { display: block; }
+    #admin h2 { margin-bottom: 6px; font-size: 1.25rem; }
+    #admin .sub { color: var(--mute); font-size: 0.9rem; margin-bottom: 18px; }
+    .back-btn {
+      display: inline-block;
+      margin-bottom: 16px;
+      color: var(--accent);
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 1rem;
+    }
+    .feedback-item {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 12px;
+    }
+    .feedback-item .meta {
+      font-size: 0.8rem;
+      color: var(--mute);
+      margin-bottom: 8px;
+    }
+    .feedback-item .query { font-weight: 600; margin-bottom: 6px; font-size: 1.05rem; }
+    .feedback-item .comment {
+      background: var(--bg);
+      padding: 12px;
+      border-radius: 8px;
+      margin-top: 10px;
+      font-size: 0.95rem;
+    }
+    .feedback-item button {
+      margin-top: 12px;
+      width: 100%;
+      padding: 12px;
+      border: none;
+      border-radius: 10px;
+      background: var(--ok);
+      color: white;
+      font-weight: 600;
+      font-size: 0.95rem;
+      cursor: pointer;
+      min-height: 46px;
+    }
+    .empty { color: var(--mute); text-align: center; padding: 40px 20px; }
+    .loading { text-align: center; color: var(--mute); padding: 20px; }
+
+    .config-warning {
+      background: #fff3cd;
+      border: 1px solid #ffc107;
+      color: #856404;
+      padding: 14px;
+      border-radius: 10px;
+      margin-bottom: 18px;
+      font-size: 0.95rem;
+      display: none;
+    }
+    .status {
+      font-size: 0.85rem;
+      color: var(--mute);
+      margin-top: 8px;
+      min-height: 1.2em;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>Prüfungstrainer Physik</h1>
+  <p>Stichwort oder Frage eingeben – Antworten aus dem Unterrichtsmaterial</p>
+</header>
+
+<main id="student">
+  <div class="config-warning" id="configWarning">
+    <strong>Konfiguration fehlt:</strong><br>
+    Bitte trage oben im Code deine Supabase-URL, den anon-Key und den Gemini-API-Key ein.
+  </div>
+
+  <div class="search-box">
+    <label for="q">Was möchtest du wissen?</label>
+    <input type="text" id="q" placeholder="z. B. Kühlschrank, Verdampfen, Aggregatzustand …" autocomplete="off">
+
+    <div class="mode-select">
+      <button type="button" id="modeSearch" class="active" onclick="setMode('search')">Intelligente Suche</button>
+      <button type="button" id="modeGemini" onclick="setMode('gemini')">KI-Antwort (Gemini)</button>
+    </div>
+
+    <button class="go-btn" id="searchBtn" onclick="search()">Antwort holen</button>
+    <p class="hint" id="modeHint">Zeigt passende Originalstellen aus den Google Docs.</p>
+    <p class="status" id="status"></p>
+  </div>
+
+  <div class="result" id="result">
+    <h2 id="result-title">Antwort</h2>
+    <div class="answer-text" id="answer"></div>
+    <div class="source" id="source"></div>
+
+    <p style="font-weight:600; margin-bottom:10px; font-size:1.05rem;">War die Antwort hilfreich?</p>
+    <div class="feedback">
+      <button class="ok" onclick="rate(true)">Richtig / gut</button>
+      <button class="bad" onclick="rate(false)">Falsch / nicht gut</button>
+    </div>
+
+    <div class="comment-box" id="commentBox">
+      <textarea id="comment" placeholder="Was kann man besser machen? (optional)"></textarea>
+      <button onclick="saveFeedback()">Kommentar speichern</button>
+    </div>
+    <div class="thanks" id="thanks">Danke! Dein Feedback wurde gespeichert.</div>
+  </div>
+
+  <div class="admin-link">
+    <a href="#" onclick="showAdmin(); return false;">Admin-Bereich</a>
+  </div>
+</main>
+
+<div id="admin">
+  <a href="#" class="back-btn" onclick="showStudent(); return false;">← Zurück zur Suche</a>
+  <h2>Admin – Schüler-Feedback</h2>
+  <p class="sub">Hier siehst du alle Bewertungen. Gute Formulierungen kannst du übernehmen.</p>
+  <div id="feedbackList"><p class="loading">Lade Feedbacks …</p></div>
+</div>
+
+<script>
+// ============================================================
+//  >>> HIER DEINE SCHLÜSSEL EINTRAGEN <<<
+// ============================================================
+const SUPABASE_URL = "https://bxxqkrgsrnpoapjthtrf.supabase.co"; // ← hier ändern
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ4eHFrcmdzcm5wb2FwanRodHJmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTMxMDExMTUsImV4cCI6MjEwODY3NzExNX0.cRAmnfS4cDly0NE1NQcdRIZvFbrFi7wnoEOLAC8Prls"; // ← hier ändern
+const GEMINI_API_KEY = "AQ.Ab8RN6KG8V_0lO3ikbUmdhj7xqDVQlGb_cxCSJoCHfbCfPSiWw"; // ← ändern
+// ============================================================
+
+const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+if (
+  SUPABASE_URL.includes("DEIN-PROJEKT") ||
+  SUPABASE_ANON_KEY.includes("DEIN-ANON") ||
+  GEMINI_API_KEY.includes("DEIN-GEMINI")
+) {
+  document.getElementById("configWarning").style.display = "block";
+}
+
+// Aktueller Modus: "search" oder "gemini"
+let currentMode = "search";
+
+function setMode(mode) {
+  currentMode = mode;
+  document.getElementById("modeSearch").classList.toggle("active", mode === "search");
+  document.getElementById("modeGemini").classList.toggle("active", mode === "gemini");
+  document.getElementById("modeHint").textContent =
+    mode === "search"
+      ? "Zeigt passende Originalstellen aus den Google Docs."
+      : "Formuliert eine klare Antwort mit KI auf Basis des Materials.";
+}
+
+// ============================================================
+// GOOGLE DOCS
+// ============================================================
+const DOCS = [
+  { id: "1SXoQoNTe9lxqX04aKhpjczRgjv9VwLaiLRBSEO_7v18", title: "Spezifische Wärmekapazität" },
+  { id: "1_3ttkvP1LN9nfmc0Xo3b71MDSApbohhODk42-RNBAqI", title: "Aggregatzustände" },
+  { id: "1eY1B-ZcfPtM6fWdg-WUOEjPRP1Af0RJtOSMzTLWMCqM", title: "Wie funktioniert ein Kühlschrank?" },
+  { id: "1aBnOVm4ZGM181d5vhYAYR2kNOhQAx77WxpyJJhRYjDw", title: "Kühlschrank – Erweiterung" },
+];
+
+const docCache = {};
+const CACHE_MINUTES = 30;
+
+let goodAnswers = [];
+let currentQuery = "";
+let currentAnswer = null;
+let currentRating = null;
+
+async function loadGoodAnswers() {
+  try {
+    const { data, error } = await supabaseClient
+      .from("good_answers")
+      .select("*")
+      .order("created_at", { ascending: false });
+    if (!error && data) goodAnswers = data;
+  } catch (e) {
+    console.warn("Gute Antworten konnten nicht geladen werden", e);
+  }
+}
+loadGoodAnswers();
+
+async function fetchDoc(doc) {
+  const now = Date.now();
+  if (docCache[doc.id] && (now - docCache[doc.id].time) < CACHE_MINUTES * 60 * 1000) {
+    return docCache[doc.id].text;
+  }
+  const url = `https://docs.google.com/document/d/${doc.id}/export?format=txt`;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`Doc ${doc.title} konnte nicht geladen werden`);
+  let text = await res.text();
+  text = text.replace(/^\uFEFF/, "").trim();
+  docCache[doc.id] = { text, time: now, title: doc.title };
+  return text;
+}
+
+function splitIntoChunks(text, title) {
+  const raw = text.split(/\n\s*\n+/).map(p => p.trim()).filter(p => p.length > 40);
+  const chunks = [];
+  for (const p of raw) {
+    if (p.length > 900) {
+      const sentences = p.split(/(?<=[.!?])\s+/);
+      let buf = "";
+      for (const s of sentences) {
+        if ((buf + " " + s).length > 700 && buf) {
+          chunks.push({ text: buf.trim(), source: title });
+          buf = s;
+        } else {
+          buf = buf ? buf + " " + s : s;
+        }
+      }
+      if (buf.trim()) chunks.push({ text: buf.trim(), source: title });
+    } else {
+      chunks.push({ text: p, source: title });
+    }
+  }
+  return chunks;
+}
+
+function scoreChunk(query, chunkText) {
+  const q = query.toLowerCase();
+  const t = chunkText.toLowerCase();
+  let score = 0;
+  const words = q.split(/[\s,.;:!?]+/).filter(w => w.length > 2);
+  for (const w of words) {
+    if (t.includes(w)) score += 2;
+    if (new RegExp(`(^|[\\n•\\-\\*\\d\\.\\s])${w}`, "i").test(chunkText)) score += 1;
+  }
+  if (q.length > 6 && t.includes(q)) score += 8;
+  if (score > 0 && chunkText.length > 120) score += 0.5;
+  return score;
+}
+
+async function askGemini(question, contextChunks) {
+  const context = contextChunks
+    .map((c, i) => `--- Quelle ${i + 1}: ${c.source} ---\n${c.text}`)
+    .join("\n\n");
+
+  const prompt = `Du bist ein hilfreicher Physik-Tutor für Schüler der Oberschule / des zweiten Bildungswegs.
+Antworte auf die Frage des Schülers.
+
+WICHTIGE REGELN:
+- Benutze möglichst die Formulierungen und Merksätze aus dem bereitgestellten Unterrichtsmaterial.
+- Erfinde keine neuen Fakten, Zahlen oder Erklärungen, die nicht im Material stehen.
+- Halte die Sprache einfach und klar (Niveau max. 10. Klasse).
+- Antworte direkt und prüfungsgeeignet, ohne lange Einleitung.
+- Wenn das Material die Frage nicht beantwortet, sage ehrlich: "Dazu steht im Material nichts Genaues."
+
+UNTERRICHTSMATERIAL:
+${context}
+
+FRAGE DES SCHÜLERS:
+${question}
+
+ANTWORT:`;
+
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=${GEMINI_API_KEY}`;
+
+  const res = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      contents: [{ parts: [{ text: prompt }] }],
+      generationConfig: {
+        temperature: 0.3,
+        maxOutputTokens: 800
+      }
+    })
+  });
+
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error("Gemini-Fehler: " + err);
+  }
+
+  const data = await res.json();
+  const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+  if (!text) throw new Error("Keine Antwort von Gemini erhalten");
+  return text.trim();
+}
+
+async function search() {
+  const q = document.getElementById("q").value.trim();
+  if (!q) return;
+
+  const btn = document.getElementById("searchBtn");
+  const status = document.getElementById("status");
+  btn.disabled = true;
+  btn.textContent = "Suche…";
+  status.textContent = "Lade Unterrichtsmaterial…";
+
+  currentQuery = q;
+  currentRating = null;
+  document.getElementById("thanks").style.display = "none";
+  document.getElementById("commentBox").classList.remove("visible");
+  document.querySelectorAll(".feedback button").forEach(b => b.classList.remove("active"));
+
+  try {
+    // 1. Freigegebene gute Antworten haben immer Vorrang
+    let bestGood = null;
+    let bestGoodScore = 0;
+    for (const g of goodAnswers) {
+      const score = scoreChunk(q, (g.keywords || []).join(" ") + " " + g.title + " " + g.text);
+      if (score > bestGoodScore) {
+        bestGoodScore = score;
+        bestGood = g;
+      }
+    }
+
+    if (bestGood && bestGoodScore >= 4) {
+      currentAnswer = {
+        title: bestGood.title,
+        text: bestGood.text,
+        source: bestGood.source || "Freigegebene gute Antwort",
+        fromGood: true
+      };
+      showResult(bestGood.title, bestGood.text, currentAnswer.source + " (bevorzugte gute Antwort)");
+      return;
+    }
+
+    // 2. Docs laden
+    status.textContent = "Durchsuche Google Docs…";
+    const allChunks = [];
+    await Promise.all(DOCS.map(async (doc) => {
+      try {
+        const text = await fetchDoc(doc);
+        allChunks.push(...splitIntoChunks(text, doc.title));
+      } catch (e) {
+        console.warn("Doc-Fehler:", doc.title, e);
+      }
+    }));
+
+    const scored = allChunks
+      .map(c => ({ ...c, score: scoreChunk(q, c.text) }))
+      .filter(c => c.score >= 1.5)
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 5);
+
+    if (scored.length === 0) {
+      currentAnswer = null;
+      showResult(
+        "Keine passende Stelle gefunden",
+        "Versuch es mit einem anderen Stichwort, z. B. „Kühlschrank“, „Verdampfen“, „Aggregatzustand“ oder „Druck“.",
+        ""
+      );
+      return;
+    }
+
+    // 3. Je nach Modus
+    if (currentMode === "search") {
+      // Intelligente Suche: besten Original-Chunk anzeigen
+      const best = scored[0];
+      const firstLine = best.text.split("\n")[0].slice(0, 80);
+      const title = firstLine.length < 60 ? firstLine : "Passende Stelle aus dem Material";
+
+      currentAnswer = {
+        title: title,
+        text: best.text,
+        source: best.source,
+        fromGood: false
+      };
+      showResult(title, best.text, best.source + " – Originalformulierung aus dem Material");
+    } else {
+      // Gemini-Modus
+      status.textContent = "Formuliere Antwort mit KI…";
+      const aiText = await askGemini(q, scored);
+      const sources = [...new Set(scored.map(c => c.source))].join(", ");
+
+      currentAnswer = {
+        title: "Antwort",
+        text: aiText,
+        source: sources,
+        fromGood: false
+      };
+      showResult("Antwort", aiText, sources + " – mit KI aus dem Originalmaterial formuliert");
+    }
+
+  } catch (e) {
+    status.textContent = "Fehler: " + (e.message || e);
+    console.error(e);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "Antwort holen";
+  }
+}
+
+function showResult(title, text, source) {
+  document.getElementById("result-title").textContent = title;
+  document.getElementById("answer").textContent = text;
+  document.getElementById("source").textContent = source ? "Quelle: " + source : "";
+  document.getElementById("result").classList.add("visible");
+  document.getElementById("status").textContent = "";
+  document.getElementById("result").scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function rate(isGood) {
+  currentRating = isGood;
+  document.querySelectorAll(".feedback button").forEach(b => b.classList.remove("active"));
+  if (isGood) document.querySelector(".feedback .ok").classList.add("active");
+  else document.querySelector(".feedback .bad").classList.add("active");
+  document.getElementById("commentBox").classList.add("visible");
+}
+
+async function saveFeedback() {
+  if (currentRating === null) return;
+  const comment = document.getElementById("comment").value.trim();
+  try {
+    const { error } = await supabaseClient.from("feedbacks").insert({
+      query: currentQuery,
+      answer_title: currentAnswer ? currentAnswer.title : null,
+      answer_text: currentAnswer ? currentAnswer.text : null,
+      rating: currentRating ? "richtig" : "falsch",
+      comment: comment || null
+    });
+    if (error) throw error;
+    document.getElementById("thanks").style.display = "block";
+    document.getElementById("commentBox").classList.remove("visible");
+  } catch (e) {
+    alert("Feedback konnte nicht gespeichert werden.\n\n" + (e.message || e));
+  }
+}
+
+function showAdmin() {
+  const pw = prompt("Admin-Passwort:");
+  if (pw !== "vhs2026") {
+    alert("Falsches Passwort.");
+    return;
+  }
+  document.getElementById("student").style.display = "none";
+  document.getElementById("admin").classList.add("visible");
+  renderFeedbacks();
+}
+
+function showStudent() {
+  document.getElementById("admin").classList.remove("visible");
+  document.getElementById("student").style.display = "block";
+}
+
+async function renderFeedbacks() {
+  const list = document.getElementById("feedbackList");
+  list.innerHTML = '<p class="loading">Lade Feedbacks…</p>';
+  try {
+    const { data, error } = await supabaseClient
+      .from("feedbacks")
+      .select("*")
+      .order("created_at", { ascending: false })
+      .limit(100);
+    if (error) throw error;
+    if (!data || data.length === 0) {
+      list.innerHTML = '<p class="empty">Noch keine Feedbacks vorhanden.</p>';
+      return;
+    }
+    list.innerHTML = data.map(f => `
+      <div class="feedback-item">
+        <div class="meta">${new Date(f.created_at).toLocaleString("de-DE")} · 
+          <strong style="color:${f.rating === "richtig" ? "var(--ok)" : "var(--bad)"}">${f.rating}</strong>
+        </div>
+        <div class="query">„${escapeHtml(f.query)}“</div>
+        <div style="font-size:0.95rem; color:var(--mute); margin-top:4px;">
+          Antwort: ${escapeHtml((f.answer_title || "—").slice(0, 80))}
+        </div>
+        ${f.comment ? `<div class="comment">${escapeHtml(f.comment)}</div>` : ""}
+        ${f.rating === "richtig" ? 
+          `<button onclick='promoteToGood(${JSON.stringify(f.answer_title || "")}, ${JSON.stringify(f.answer_text || "")}, ${JSON.stringify(f.query)})'>
+            Als gute Antwort übernehmen
+          </button>` : ""}
+      </div>
+    `).join("");
+  } catch (e) {
+    list.innerHTML = `<p class="empty">Fehler beim Laden: ${escapeHtml(e.message || e)}</p>`;
+  }
+}
+
+async function promoteToGood(title, text, query) {
+  const newTitle = prompt("Kurzer Titel:", title) || title;
+  const newText = prompt("Text der guten Antwort (kannst du anpassen):", text);
+  if (!newText) return;
+  const keywordsStr = prompt("Stichworte (kommagetrennt):", query) || query;
+  const keywords = keywordsStr.toLowerCase().split(/,\s*/).map(k => k.trim()).filter(Boolean);
+  try {
+    const { error } = await supabaseClient.from("good_answers").insert({
+      title: newTitle,
+      text: newText,
+      keywords: keywords,
+      source: "Vom Admin freigegeben (Schüler-Feedback)"
+    });
+    if (error) throw error;
+    await loadGoodAnswers();
+    alert("Gespeichert! Diese Antwort wird bei passenden Suchen jetzt bevorzugt angezeigt.");
+  } catch (e) {
+    alert("Konnte nicht gespeichert werden:\n" + (e.message || e));
+  }
+}
+
+function escapeHtml(str) {
+  return String(str)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+document.getElementById("q").addEventListener("keydown", e => {
+  if (e.key === "Enter") search();
+});
+</script>
+</body>
+</html>
